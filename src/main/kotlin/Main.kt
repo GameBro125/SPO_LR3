@@ -17,47 +17,41 @@ import cafe.adriel.bonsai.core.tree.Tree
 import cafe.adriel.bonsai.core.tree.TreeScope
 import org.example.lexical_analyzer.AnalyzerResult
 import org.example.lexical_analyzer.LexicalAnalyzer
+import org.example.syntax_analyzer.BracketsAnalysis
 import org.example.syntax_analyzer.SyntacticalAnalyzer
 import org.example.syntax_analyzer.SyntaxTree
 import org.example.tables.BinaryTreeTable
 import tables.SimpleRehashTable
 import kotlin.time.measureTime
 
+val SOURCECODE = """
+     b := (a + b) * (c - d);
 
+    """.trimIndent()
 fun main() = application {
-    // testTables()
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "Партилов Д.М., ИВТ-424, ЛР3",
-        state = rememberWindowState(width = 1000.dp, height = 1000.dp)
-    ) {
-        MaterialTheme {
-            Box(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                testAnalyzer()
+
+    BracketsAnalysis(SOURCECODE).analyzeBrackets(SOURCECODE)
+        Window(
+            onCloseRequest = ::exitApplication,
+            title = "Владислав 3",
+            state = rememberWindowState(width = 1000.dp, height = 1000.dp)
+        ) {
+            MaterialTheme {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    testAnalyzer()
+                }
             }
         }
     }
-}
+
 
 @Composable
 fun testAnalyzer() {
-    val sourceCode = """
-        c := 1.15; { присваиваем переменной c значение 1.15 }
-        a := c;
-        b := 1;
-        if a > b then
-            if a = b then
-               c := 1.32;
-            else
-               c := 1.12;
-        else
-            c := 15; { неуспешное выполнение условия }
-        if 15 > 1.12 then
-            c := 13; 
-    """.trimIndent()
-    val lexicalResults = analyzeLexemes(sourceCode)
+
+
+    val lexicalResults = analyzeLexemes(SOURCECODE)
     analyzeSyntax(lexicalResults).onSuccess {
         drawNode(node = it)
     }.onFailure {

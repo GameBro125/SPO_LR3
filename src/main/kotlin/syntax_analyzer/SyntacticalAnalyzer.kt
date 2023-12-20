@@ -21,18 +21,6 @@ class SyntacticalAnalyzer {
         return analyzeSyntax(source.filterIsInstance<Lexeme>(), SyntaxTree.Node())
     }
 
-    /**
-     *   c := 1.15; { присваиваем переменной c значение 1.15 }
-     *   a := c;
-     *   b := 1;
-     *   if a > b then
-     *       if a = b then
-     *          c := 1.32;
-     *   else
-     *       c := 15; { неуспешное выполнение условия }
-     *   if b = a then
-     *       c := 0.3;
-     */
     private fun analyzeSyntax(sourceLexemes: List<Lexeme>, startNode: SyntaxTree.Node): SyntaxTree.Node {
         var lexemes = sourceLexemes
         while (lexemes.isNotEmpty()) {
@@ -41,18 +29,62 @@ class SyntacticalAnalyzer {
                 reportError(value = "${lexemes.first().position}: начатое выражение не заканчивается разделителем <;>")
             }
             val lexemesBeforeDelimiter = lexemes.subList(0, delimiterIndex)
+
             if (lexemesBeforeDelimiter.none { it.type == LexemeType.CONDITIONAL_OPERATOR }) {
-                // Если работаем не с условной конструкцией в коде
-                startNode.addNode(analyzeExpression(lexemesBeforeDelimiter))
+                startNode.addNode(analyzeAssignment(lexemesBeforeDelimiter))
                 lexemes = lexemes.drop(delimiterIndex + 1)
             } else {
-                // Ищём законченную условную конструкцию и анализируем всё внутри
                 val conditionalLexemes = locateConditionalBlock(lexemes)
                 startNode.addNode(analyzeConditional(conditionalLexemes))
                 lexemes = lexemes.drop(conditionalLexemes.lastIndex + 1)
             }
         }
         return startNode
+    }
+    private fun analyzeAssignment(lexemes: List<Lexeme>): SyntaxTree.Node {
+        if (lexemes.size < 3) {
+            reportError(value = "${lexemes.first().position}: незаконченное выражение")
+        }
+        if (lexemes[1].type != LexemeType.ASSIGN_SIGN) {
+            reportError(value = "${lexemes[1].position}: вместо ${lexemes[1].value} ожидалась операция присваивания")
+        }
+
+        val leftOperand = SyntaxTree.Node(value = lexemes[0].value)
+        val operator = SyntaxTree.Node(value = lexemes[1].value)
+        val rightOperand = analyzeBrackets(lexemes.subList(2, lexemes.size))
+
+        return SyntaxTree.Node(children = mutableListOf(leftOperand, operator, rightOperand))
+    }
+    private fun analyzeBrackets(lexemes: List<Lexeme>): SyntaxTree.Node {
+        var remainingLexemes = lexemes
+        val nodes = mutableListOf<SyntaxTree.Node>()
+
+        while (remainingLexemes.isNotEmpty()) {
+            val numberNode = SyntaxTree.Node(value = remainingLexemes.first().value)
+            nodes.add(numberNode)
+            remainingLexemes = remainingLexemes.drop(1)
+
+            if (remainingLexemes.isNotEmpty() && isOperator(remainingLexemes.first())) {
+                val operatorNode = SyntaxTree.Node(value = remainingLexemes.first().value)
+                nodes.add(operatorNode)
+                remainingLexemes = remainingLexemes.drop(1)
+            } else if (remainingLexemes.isNotEmpty() && remainingLexemes.first().type == LexemeType.OPEN_BRACKET) {
+                val expressionInBrackets = analyzeExpressionInBrackets(remainingLexemes)
+                nodes.add(expressionInBrackets)
+                remainingLexemes = remainingLexemes.drop(1)
+            }
+        }
+
+        return SyntaxTree.Node(children = nodes)
+    }
+    private fun isOperator(lexeme: Lexeme): Boolean {
+        return lexeme.type in setOf(
+            LexemeType.OPERATORS_SIGN,
+        )
+    }
+    private fun analyzeExpressionInBrackets(lexemes: List<Lexeme>): SyntaxTree.Node {
+        val innerExpression = analyzeBrackets(lexemes.subList(1, lexemes.size - 1))
+        return SyntaxTree.Node(children = mutableListOf(innerExpression))
     }
 
     private fun locateConditionalBlock(lexemes: List<Lexeme>): List<Lexeme> {

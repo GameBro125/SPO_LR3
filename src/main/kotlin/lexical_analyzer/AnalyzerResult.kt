@@ -1,21 +1,25 @@
 package org.example.lexical_analyzer
 
+
 sealed interface AnalyzerResult
 data class Lexeme(
     val position: Int? = null,
     val value: String,
     val type: LexemeType
-): AnalyzerResult {
+) : AnalyzerResult {
     override fun toString(): String {
         return "$value - ${type.asString}"
     }
 }
 
 enum class LexemeType(val asString: String) {
-    CONDITIONAL_OPERATOR("Оператор условия"),
-    DELIMITER("Разделитель"),
+    CONDITIONAL_OPERATOR("Оператор условия"), // [if, else, then]
+    DELIMITER("Разделитель"), // ;
     IDENTIFIER("Идентификатор"),
     COMPARISON_SIGN("Знак сравнения"),
+    OPERATORS_SIGN("Знак операции"), // [+, -, *, /]
+    OPEN_BRACKET("Скобка"), // [(, )]
+    CLOSE_BRACKET("Скобка"), // [(, )]
     CONSTANT("Константа"),
     ASSIGN_SIGN("Знак присваивания")
 }

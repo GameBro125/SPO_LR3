@@ -1,5 +1,7 @@
 package org.example.lexical_analyzer
 
+import org.example.isRomanDigit
+
 class LexicalAnalyzer {
 
     private enum class State {
@@ -7,7 +9,7 @@ class LexicalAnalyzer {
         IDENTIFIER,
         NUMBER,
         ASSIGN,
-        COMMENT
+        COMMENT,
     }
 
     private var currentState = State.START
@@ -20,18 +22,16 @@ class LexicalAnalyzer {
                 State.START -> {
                     clearBuffer()
                     when {
-                        char in listOf(' ', '\n', '\t', '\r') -> {}
-
+                        char in listOf(' ', '\n', '\t', '\r') -> {
+                        }
+                        char.isRomanDigit() -> {
+                            addToBuffer(char)
+                            currentState = State.NUMBER
+                        }
                         char.isLetter() -> {
                             addToBuffer(char)
                             currentState = State.IDENTIFIER
                         }
-
-                        char.isDigit() -> {
-                            addToBuffer(char)
-                            currentState = State.NUMBER
-                        }
-
                         char == '{' -> {
                             if (text.substring(startIndex = index + 1).substringBefore('{').contains('}')) {
                                 currentState = State.COMMENT
@@ -39,12 +39,20 @@ class LexicalAnalyzer {
                                 reportError(index, "Незакрытый комментарий!")
                             }
                         }
-
+                        char == '('  -> {
+                            addToBuffer(char)
+                            addLexeme(index, lexemeBuffer, LexemeType.OPEN_BRACKET)
+                            currentState = State.START
+                        }
+                         char == ')' -> {
+                            addToBuffer(char)
+                            addLexeme(index, lexemeBuffer, LexemeType.CLOSE_BRACKET)
+                            currentState = State.START
+                        }
                         char == ':' -> {
                             addToBuffer(char)
                             currentState = State.ASSIGN
                         }
-
                         else -> {
                             addToBuffer(char)
                             addLexeme(
@@ -78,7 +86,7 @@ class LexicalAnalyzer {
                 }
 
                 State.NUMBER -> {
-                    if (char.isDigit() || (char == '.' && lexemeBuffer.contains('.').not())) {
+                    if (char.isRomanDigit()) {
                         addToBuffer(char)
                     } else {
                         addLexeme(index = index, value = lexemeBuffer.removeSuffix("."), type = LexemeType.CONSTANT)
@@ -110,8 +118,6 @@ class LexicalAnalyzer {
                 }
             }
         }
-        // print("Исходный код: \n\n\n $text \n\n\n")
-        // results.map(::checkResult).forEach(::println)
         return results.map(::checkResult)
     }
 
@@ -147,10 +153,16 @@ class LexicalAnalyzer {
             Lexeme(value = "then", type = LexemeType.CONDITIONAL_OPERATOR),
             Lexeme(value = "else", type = LexemeType.CONDITIONAL_OPERATOR),
             Lexeme(value = ";", type = LexemeType.DELIMITER),
+            Lexeme(value = "+", type = LexemeType.OPERATORS_SIGN),
+            Lexeme(value = "-", type = LexemeType.OPERATORS_SIGN),
+            Lexeme(value = "*", type = LexemeType.OPERATORS_SIGN),
+            Lexeme(value = "/", type = LexemeType.OPERATORS_SIGN),
             Lexeme(value = "<", type = LexemeType.COMPARISON_SIGN),
             Lexeme(value = ">", type = LexemeType.COMPARISON_SIGN),
             Lexeme(value = "=", type = LexemeType.COMPARISON_SIGN),
-            Lexeme(value = ":=", type = LexemeType.ASSIGN_SIGN)
+            Lexeme(value = "(", type = LexemeType.OPEN_BRACKET),
+            Lexeme(value = ")", type = LexemeType.CLOSE_BRACKET),
+            Lexeme(value = ":=", type = LexemeType.ASSIGN_SIGN),
         )
     }
 }
